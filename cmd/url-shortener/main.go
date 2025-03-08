@@ -2,6 +2,8 @@ package main
 
 import (
 	"github.com/sdvaanyaa/url-shortener/internal/config"
+	"github.com/sdvaanyaa/url-shortener/internal/lib/logger/sl"
+	"github.com/sdvaanyaa/url-shortener/internal/storage/sqlite"
 	"log/slog"
 	"os"
 )
@@ -23,9 +25,16 @@ func main() {
 
 	log.Debug("debug messages are enabled")
 
-	// TODO: init storage: sqlite
+	//init storage: sqlite
+	storage, err := sqlite.New(cfg.StoragePath)
+	if err != nil {
+		log.Error("failed to initialize storage", sl.Err(err))
+		os.Exit(1)
+	}
 
-	// TODO: init router: chi, chi render
+	_ = storage
+
+	// init router: chi, chi render
 
 	// TODO: run server
 }
