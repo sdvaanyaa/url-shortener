@@ -2,6 +2,7 @@ package save
 
 import (
 	"errors"
+	"io"
 	"log/slog"
 	"net/http"
 
@@ -27,6 +28,7 @@ type Response struct {
 // TODO: move to config
 const aliasLength = 6
 
+//go:generate go run github.com/vektra/mockery/v2@v2.53.2 --name=URLSaver
 type URLSaver interface {
 	SaveURL(urlToSave string, alias string) (int64, error)
 }
@@ -43,8 +45,18 @@ func New(log *slog.Logger, urlSaver URLSaver) http.HandlerFunc {
 		var req Request
 
 		err := render.DecodeJSON(r.Body, &req)
+
+		if errors.Is(err, io.EOF) {
+			// error handling with empty body
+			log.Error("request body is empty")
+
+			render.JSON(w, r, resp.Error("empty request"))
+
+			return
+		}
+
 		if err != nil {
-			log.Error("failed to decode request")
+			log.Error("failed to decode request", sl.Err(err))
 
 			render.JSON(w, r, resp.Error("failed to decode request"))
 
@@ -58,7 +70,6 @@ func New(log *slog.Logger, urlSaver URLSaver) http.HandlerFunc {
 
 			log.Error("failed to validate request", sl.Err(err))
 
-			render.JSON(w, r, resp.Error("invalid request"))
 			render.JSON(w, r, resp.ValidationError(validateErr))
 
 			return
